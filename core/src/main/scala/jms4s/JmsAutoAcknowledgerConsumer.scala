@@ -2,7 +2,7 @@ package jms4s
 
 import cats.Functor
 import cats.data.NonEmptyList
-import cats.effect.{ Concurrent, ContextShift, Resource, Sync }
+import cats.effect.{ Async, Resource, Sync }
 import cats.syntax.all._
 import fs2.Stream
 import fs2.concurrent.Queue
@@ -20,7 +20,7 @@ trait JmsAutoAcknowledgerConsumer[F[_]] {
 
 object JmsAutoAcknowledgerConsumer {
 
-  private[jms4s] def make[F[_]: ContextShift: Concurrent](
+  private[jms4s] def make[F[_]: Async](
     context: JmsContext[F],
     inputDestinationName: DestinationName,
     concurrencyLevel: Int
@@ -38,7 +38,7 @@ object JmsAutoAcknowledgerConsumer {
           }
     } yield build(pool, concurrencyLevel)
 
-  private def build[F[_]: ContextShift: Concurrent](
+  private def build[F[_]: Async](
     pool: Queue[F, (JmsContext[F], JmsMessageConsumer[F], MessageFactory[F])],
     concurrencyLevel: Int
   ): JmsAutoAcknowledgerConsumer[F] =

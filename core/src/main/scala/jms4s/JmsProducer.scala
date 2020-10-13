@@ -1,7 +1,7 @@
 package jms4s
 
 import cats.data.NonEmptyList
-import cats.effect.{ Concurrent, ContextShift, Resource }
+import cats.effect.{ Async, Resource }
 import cats.syntax.all._
 import fs2.concurrent.Queue
 import jms4s.config.DestinationName
@@ -30,14 +30,12 @@ trait JmsProducer[F[_]] {
 
 object JmsProducer {
 
-  private[jms4s] def make[F[_]: ContextShift: Concurrent](
+  private[jms4s] def make[F[_]: Async](
     context: JmsContext[F],
     concurrencyLevel: Int
   ): Resource[F, JmsProducer[F]] =
     for {
-      pool <- Resource.liftF(
-               Queue.bounded[F, JmsContext[F]](concurrencyLevel)
-             )
+      pool <- Resource.liftF(Queue.bounded[F, JmsContext[F]](concurrencyLevel))
       _ <- (0 until concurrencyLevel).toList.traverse_ { _ =>
             for {
               c <- context.createContext(SessionType.AutoAcknowledge)

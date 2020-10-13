@@ -1,6 +1,6 @@
 package jms4s.jms
 
-import cats.effect.{ Blocker, Concurrent, ContextShift, Resource, Sync }
+import cats.effect.{ Async, Resource, Sync }
 import cats.syntax.all._
 import io.chrisdavenport.log4cats.Logger
 import javax.jms.JMSContext
@@ -11,9 +11,8 @@ import jms4s.model.SessionType
 
 import scala.concurrent.duration.FiniteDuration
 
-class JmsContext[F[_]: Sync: Logger: ContextShift: Concurrent](
-  private val context: JMSContext,
-  private[jms4s] val blocker: Blocker
+class JmsContext[F[_]: Async: Logger](
+  private val context: JMSContext
 ) {
 
   def createContext(sessionType: SessionType): Resource[F, JmsContext[F]] =
@@ -21,28 +20,27 @@ class JmsContext[F[_]: Sync: Logger: ContextShift: Concurrent](
       .make(
         Logger[F].info("Creating context") *> {
           for {
-            ctx <- blocker.delay(context.createContext(sessionType.rawAcknowledgeMode))
+            ctx <- Sync[F].blocking(context.createContext(sessionType.rawAcknowledgeMode))
             _   <- Logger[F].info(s"Context $ctx successfully created")
           } yield ctx
         }
       )(context =>
         Logger[F].info(s"Releasing context $context") *>
-          blocker.delay(context.close())
+          Sync[F].blocking(context.close())
       )
-      .map(context => new JmsContext(context, blocker))
+      .map(context => new JmsContext(context))
 
   def send(destinationName: DestinationName, message: JmsMessage): F[Unit] =
     createDestination(destinationName)
-      .flatMap(destination => blocker.delay(context.createProducer().send(destination.wrapped, message.wrapped)))
+      .flatMap(destination => Sync[F].blocking(context.createProducer().send(destination.wrapped, message.wrapped)))
       .map(_ => ())
 
   def send(destinationName: DestinationName, message: JmsMessage, delay: FiniteDuration): F[Unit] =
     for {
       destination <- createDestination(destinationName)
       p           <- Sync[F].delay(context.createProducer())
-      _ <- Sync[F].delay(p.setDeliveryDelay(delay.toMillis)) *> blocker.delay(
-            p.send(destination.wrapped, message.wrapped)
-          )
+      _ <- Sync[F].delay(p.setDeliveryDelay(delay.toMillis)) *>
+            Sync[F].blocking(p.send(destination.wrapped, message.wrapped))
     } yield ()
 
   def createJmsConsumer(destinationName: DestinationName): Resource[F, JmsMessageConsumer[F]] =
@@ -50,19 +48,19 @@ class JmsContext[F[_]: Sync: Logger: ContextShift: Concurrent](
       destination <- Resource.liftF(createDestination(destinationName))
       consumer <- Resource.make(
                    Logger[F].info(s"Creating consumer for destination $destinationName") *>
-                     blocker.delay(context.createConsumer(destination.wrapped))
+                     Sync[F].blocking(context.createConsumer(destination.wrapped))
                  )(consumer =>
                    Logger[F].info(s"Closing consumer for destination $destinationName") *>
-                     blocker.delay(consumer.close())
+                     Sync[F].blocking(consumer.close())
                  )
-    } yield new JmsMessageConsumer[F](consumer, blocker)
+    } yield new JmsMessageConsumer[F](consumer)
 
   def createTextMessage(value: String): F[JmsTextMessage] =
     Sync[F].delay(new JmsTextMessage(context.createTextMessage(value)))
 
-  def commit: F[Unit] = blocker.delay(context.commit())
+  def commit: F[Unit] = Sync[F].blocking(context.commit())
 
-  def rollback: F[Unit] = blocker.delay(context.rollback())
+  def rollback: F[Unit] = Sync[F].blocking(context.rollback())
 
   private def createQueue(queue: QueueName): F[JmsQueue] =
     Sync[F].delay(new JmsQueue(context.createQueue(queue.value)))

@@ -2,7 +2,7 @@ package jms4s
 
 import cats.Functor
 import cats.data.NonEmptyList
-import cats.effect.{ Concurrent, ContextShift, Resource }
+import cats.effect.{ Async, Concurrent, Resource }
 import cats.syntax.all._
 import fs2.Stream
 import fs2.concurrent.Queue
@@ -20,7 +20,7 @@ trait JmsTransactedConsumer[F[_]] {
 
 object JmsTransactedConsumer {
 
-  private[jms4s] def make[F[_]: ContextShift: Concurrent](
+  private[jms4s] def make[F[_]: Async](
     context: JmsContext[F],
     inputDestinationName: DestinationName,
     concurrencyLevel: Int
@@ -39,7 +39,7 @@ object JmsTransactedConsumer {
             )
     } yield build(new JmsTransactedConsumerPool[F](pool), concurrencyLevel)
 
-  private def build[F[_]: ContextShift: Concurrent](
+  private def build[F[_]: Async](
     pool: JmsTransactedConsumerPool[F],
     concurrencyLevel: Int
   ): JmsTransactedConsumer[F] = new JmsTransactedConsumer[F] {
@@ -73,7 +73,7 @@ object JmsTransactedConsumer {
         .drain
   }
 
-  private[jms4s] class JmsTransactedConsumerPool[F[_]: Concurrent: ContextShift](
+  private[jms4s] class JmsTransactedConsumerPool[F[_]: Concurrent](
     pool: Queue[F, (JmsContext[F], JmsMessageConsumer[F], MessageFactory[F])]
   ) {
 

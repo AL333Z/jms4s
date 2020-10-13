@@ -1,7 +1,7 @@
 package jms4s.ibmmq
 
 import cats.data.NonEmptyList
-import cats.effect.{ Blocker, Concurrent, ContextShift, Resource }
+import cats.effect.{ Async, Resource, Sync }
 import cats.syntax.all._
 import com.ibm.mq.jms.MQConnectionFactory
 import com.ibm.msg.client.wmq.common.CommonConstants
@@ -26,14 +26,13 @@ object ibmMQ {
   case class Channel(value: String)      extends AnyVal
   case class ClientId(value: String)     extends AnyVal
 
-  def makeJmsClient[F[_]: Logger: ContextShift: Concurrent](
-    config: Config,
-    blocker: Blocker
+  def makeJmsClient[F[_]: Logger: Async](
+    config: Config
   ): Resource[F, JmsClient[F]] =
     for {
       context <- Resource.make(
                   Logger[F].info(s"Opening Context to MQ at ${hosts(config.endpoints)}...") >>
-                    blocker.delay {
+                    Sync[F].blocking {
                       val connectionFactory: MQConnectionFactory = new MQConnectionFactory()
                       connectionFactory.setTransportType(CommonConstants.WMQ_CM_CLIENT)
                       connectionFactory.setQueueManager(config.qm.value)
@@ -50,11 +49,11 @@ object ibmMQ {
                     }
                 )(c =>
                   Logger[F].info(s"Closing Context $c at ${hosts(config.endpoints)}...") *>
-                    blocker.delay(c.close()) *>
+                    Sync[F].blocking(c.close()) *>
                     Logger[F].info(s"Closed Context $c.")
                 )
       _ <- Resource.liftF(Logger[F].info(s"Opened Context $context at ${hosts(config.endpoints)}."))
-    } yield new JmsClient[F](new JmsContext[F](context, blocker))
+    } yield new JmsClient[F](new JmsContext[F](context))
 
   private def hosts(endpoints: NonEmptyList[Endpoint]): String =
     endpoints.map(e => s"${e.host}(${e.port})").toList.mkString(",")
