@@ -1,13 +1,12 @@
-val catsV                = "2.2.0"
-val jmsV                 = "2.0.1"
-val ibmMQV               = "9.2.0.1"
-val activeMQV            = "2.15.0"
-val catsEffectV          = "3.0.0-M1"
-val catsEffectScalaTestV = "0.4.1"
-val fs2V                 = "3.0.0-M1"
-val log4catsV            = "1.1.1"
-val log4jSlf4jImplV      = "2.13.3"
-
+val catsV             = "2.2.0"
+val jmsV              = "2.0.1"
+val ibmMQV            = "9.2.0.1"
+val activeMQV         = "2.15.0"
+val catsEffectV       = "3.0.0-M1"
+val fs2V              = "3.0.0-M1"
+val log4catsV         = "1.1.1"
+val log4jSlf4jImplV   = "2.13.3"
+val scalaTestV        = "3.2.0"
 val kindProjectorV    = "0.11.0"
 val betterMonadicForV = "0.3.1"
 
@@ -43,7 +42,12 @@ lazy val tests = project
   .in(file("tests"))
   .settings(commonSettings: _*)
   .enablePlugins(NoPublishPlugin)
-  .settings(libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % log4jSlf4jImplV % Runtime)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.apache.logging.log4j" % "log4j-slf4j-impl"    % log4jSlf4jImplV % Runtime,
+      "org.scalatest"            %% "scalatest-freespec" % scalaTestV      % Test
+    )
+  )
   .settings(parallelExecution in Test := false)
   .dependsOn(ibmMQ, activeMQArtemis)
 
@@ -110,13 +114,12 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.typelevel" %% "kind-projector"     % kindProjectorV cross CrossVersion.full),
   addCompilerPlugin("com.olegpy"    %% "better-monadic-for" % betterMonadicForV),
   libraryDependencies ++= Seq(
-    "javax.jms"         % "javax.jms-api"                  % jmsV,
-    "org.typelevel"     %% "cats-core"                     % catsV,
-    "org.typelevel"     %% "cats-effect"                   % catsEffectV,
-    "co.fs2"            %% "fs2-core"                      % fs2V,
-    "co.fs2"            %% "fs2-io"                        % fs2V,
-    "io.chrisdavenport" %% "log4cats-slf4j"                % log4catsV,
-    "com.codecommit"    %% "cats-effect-testing-scalatest" % catsEffectScalaTestV % Test
+    "javax.jms"         % "javax.jms-api"   % jmsV,
+    "org.typelevel"     %% "cats-core"      % catsV,
+    "org.typelevel"     %% "cats-effect"    % catsEffectV,
+    "co.fs2"            %% "fs2-core"       % fs2V,
+    "co.fs2"            %% "fs2-io"         % fs2V,
+    "io.chrisdavenport" %% "log4cats-slf4j" % log4catsV
   )
 )
 
