@@ -3,9 +3,9 @@ package jms4s.activemq
 import cats.data.NonEmptyList
 import cats.effect.{ Async, Resource, Sync }
 import cats.syntax.all._
-import io.chrisdavenport.log4cats.Logger
 import jms4s.JmsClient
 import jms4s.jms.JmsContext
+import jms4s.jms.utils.Logger
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory
 
 object activeMQ {
@@ -21,12 +21,13 @@ object activeMQ {
   case class Endpoint(host: String, port: Int)
   case class ClientId(value: String) extends AnyVal
 
-  def makeJmsClient[F[_]: Logger: Async](
+  def makeJmsClient[F[_]: Async](
     config: Config
-  ): Resource[F, JmsClient[F]] =
+  ): Resource[F, JmsClient[F]] = {
+    val logger = Logger[F]
     for {
       context <- Resource.make(
-                  Logger[F].info(s"Opening context to MQ at ${hosts(config.endpoints)}...") *>
+                  logger.info(s"Opening context to MQ at ${hosts(config.endpoints)}...") *>
                     Sync[F].blocking {
                       val factory = new ActiveMQConnectionFactory(hosts(config.endpoints))
                       factory.setClientID(config.clientId.value)
@@ -36,12 +37,13 @@ object activeMQ {
                       )
                     }
                 )(c =>
-                  Logger[F].info(s"Closing context $c to MQ at ${hosts(config.endpoints)}...") *>
+                  logger.info(s"Closing context $c to MQ at ${hosts(config.endpoints)}...") *>
                     Sync[F].blocking(c.close()) *>
-                    Logger[F].info(s"Closed context $c to MQ at ${hosts(config.endpoints)}.")
+                    logger.info(s"Closed context $c to MQ at ${hosts(config.endpoints)}.")
                 )
-      _ <- Resource.liftF(Logger[F].info(s"Opened context $context."))
+      _ <- Resource.liftF(logger.info(s"Opened context $context."))
     } yield new JmsClient[F](new JmsContext[F](context))
+  }
 
   private def hosts(endpoints: NonEmptyList[Endpoint]): String =
     endpoints.map(e => s"tcp://${e.host}:${e.port}").toList.mkString(",")

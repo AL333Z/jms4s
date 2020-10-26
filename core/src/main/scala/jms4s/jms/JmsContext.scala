@@ -2,30 +2,32 @@ package jms4s.jms
 
 import cats.effect.{ Async, Resource, Sync }
 import cats.syntax.all._
-import io.chrisdavenport.log4cats.Logger
 import javax.jms.JMSContext
 import jms4s.config.{ DestinationName, QueueName, TopicName }
 import jms4s.jms.JmsDestination.{ JmsQueue, JmsTopic }
 import jms4s.jms.JmsMessage.JmsTextMessage
+import jms4s.jms.utils.Logger
 import jms4s.model.SessionType
 
 import scala.concurrent.duration.FiniteDuration
 
-class JmsContext[F[_]: Async: Logger](
+class JmsContext[F[_]: Async](
   private val context: JMSContext
 ) {
+
+  private val logger = Logger[F]
 
   def createContext(sessionType: SessionType): Resource[F, JmsContext[F]] =
     Resource
       .make(
-        Logger[F].info("Creating context") *> {
+        logger.info("Creating context") *> {
           for {
             ctx <- Sync[F].blocking(context.createContext(sessionType.rawAcknowledgeMode))
-            _   <- Logger[F].info(s"Context $ctx successfully created")
+            _   <- logger.info(s"Context $ctx successfully created")
           } yield ctx
         }
       )(context =>
-        Logger[F].info(s"Releasing context $context") *>
+        logger.info(s"Releasing context $context") *>
           Sync[F].blocking(context.close())
       )
       .map(context => new JmsContext(context))
@@ -47,10 +49,10 @@ class JmsContext[F[_]: Async: Logger](
     for {
       destination <- Resource.liftF(createDestination(destinationName))
       consumer <- Resource.make(
-                   Logger[F].info(s"Creating consumer for destination $destinationName") *>
+                   logger.info(s"Creating consumer for destination $destinationName") *>
                      Sync[F].blocking(context.createConsumer(destination.wrapped))
                  )(consumer =>
-                   Logger[F].info(s"Closing consumer for destination $destinationName") *>
+                   logger.info(s"Closing consumer for destination $destinationName") *>
                      Sync[F].blocking(consumer.close())
                  )
     } yield new JmsMessageConsumer[F](consumer)

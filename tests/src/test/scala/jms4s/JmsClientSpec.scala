@@ -10,8 +10,11 @@ import jms4s.jms.JmsMessage
 import jms4s.model.SessionType
 import org.scalatest.freespec.AsyncFreeSpec
 import cats.effect.kernel.{ Clock, Ref }
+import jms4s.jms.utils.Logger
 
 trait JmsClientSpec extends AsyncFreeSpec with IOSpec with Jms4sBaseSpec {
+
+  private val logger = Logger[IO]
 
   s"publish $nMessages messages and then consume them concurrently with local transactions" in {
     val res = for {

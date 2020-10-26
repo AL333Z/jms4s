@@ -2,10 +2,9 @@ package jms4s.jms
 
 import cats.effect.{ Async, Spawn, Sync }
 import cats.syntax.all._
-import io.chrisdavenport.log4cats.Logger
 import javax.jms.JMSConsumer
 
-class JmsMessageConsumer[F[_]: Async: Logger] private[jms4s] (
+class JmsMessageConsumer[F[_]: Async] private[jms4s] (
   private[jms4s] val wrapped: JMSConsumer
 ) {
 

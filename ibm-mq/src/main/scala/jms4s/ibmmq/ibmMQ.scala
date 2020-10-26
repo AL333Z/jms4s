@@ -5,9 +5,10 @@ import cats.effect.{ Async, Resource, Sync }
 import cats.syntax.all._
 import com.ibm.mq.jms.MQConnectionFactory
 import com.ibm.msg.client.wmq.common.CommonConstants
-import io.chrisdavenport.log4cats.Logger
+
 import jms4s.JmsClient
 import jms4s.jms.JmsContext
+import jms4s.jms.utils.Logger
 
 object ibmMQ {
 
@@ -26,12 +27,13 @@ object ibmMQ {
   case class Channel(value: String)      extends AnyVal
   case class ClientId(value: String)     extends AnyVal
 
-  def makeJmsClient[F[_]: Logger: Async](
+  def makeJmsClient[F[_]: Async](
     config: Config
-  ): Resource[F, JmsClient[F]] =
+  ): Resource[F, JmsClient[F]] = {
+    val logger = Logger[F]
     for {
       context <- Resource.make(
-                  Logger[F].info(s"Opening Context to MQ at ${hosts(config.endpoints)}...") >>
+                  logger.info(s"Opening Context to MQ at ${hosts(config.endpoints)}...") >>
                     Sync[F].blocking {
                       val connectionFactory: MQConnectionFactory = new MQConnectionFactory()
                       connectionFactory.setTransportType(CommonConstants.WMQ_CM_CLIENT)
@@ -48,12 +50,13 @@ object ibmMQ {
                       }.getOrElse(connectionFactory.createContext())
                     }
                 )(c =>
-                  Logger[F].info(s"Closing Context $c at ${hosts(config.endpoints)}...") *>
+                  logger.info(s"Closing Context $c at ${hosts(config.endpoints)}...") *>
                     Sync[F].blocking(c.close()) *>
-                    Logger[F].info(s"Closed Context $c.")
+                    logger.info(s"Closed Context $c.")
                 )
-      _ <- Resource.liftF(Logger[F].info(s"Opened Context $context at ${hosts(config.endpoints)}."))
+      _ <- Resource.liftF(logger.info(s"Opened Context $context at ${hosts(config.endpoints)}."))
     } yield new JmsClient[F](new JmsContext[F](context))
+  }
 
   private def hosts(endpoints: NonEmptyList[Endpoint]): String =
     endpoints.map(e => s"${e.host}(${e.port})").toList.mkString(",")
