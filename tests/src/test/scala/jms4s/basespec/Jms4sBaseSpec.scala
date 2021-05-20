@@ -45,8 +45,8 @@ trait Jms4sBaseSpec {
   val timeout: FiniteDuration      = 4.seconds // CI is slow...
   val delay: FiniteDuration        = 200.millis
   val delayWithTolerance: Duration = delay * 0.8 // it looks like activemq is not fully respecting delivery delay
-  val topicName1: TopicName        = TopicName("DEV.BASE.TOPIC")
-  val topicName2: TopicName        = TopicName("DEV.BASE.TOPIC.1")
+  val topicName1: TopicName        = TopicName("dev1/")
+  val topicName2: TopicName        = TopicName("dev2/")
   val inputQueueName: QueueName    = QueueName("DEV.QUEUE.1")
   val outputQueueName1: QueueName  = QueueName("DEV.QUEUE.2")
   val outputQueueName2: QueueName  = QueueName("DEV.QUEUE.3")

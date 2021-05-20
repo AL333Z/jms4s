@@ -113,6 +113,7 @@ val catsEffectScalaTestV = "1.1.0"
 val fs2V                 = "3.0.2"
 val log4catsV            = "2.1.0"
 val log4jSlf4jImplV      = "2.14.1"
+val testcontainersScalaV = "0.39.3"
 
 val kindProjectorV    = "0.11.3"
 val betterMonadicForV = "0.3.1"
@@ -150,7 +151,12 @@ lazy val tests = project
   .in(file("tests"))
   .settings(commonSettings, releaseSettings)
   .enablePlugins(NoPublishPlugin)
-  .settings(libraryDependencies += "org.apache.logging.log4j" % "log4j-slf4j-impl" % log4jSlf4jImplV % Runtime)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.apache.logging.log4j" % "log4j-slf4j-impl"                % log4jSlf4jImplV      % Runtime,
+      "com.dimafeng"             %% "testcontainers-scala-scalatest" % testcontainersScalaV % Test
+    )
+  )
   .settings(Test / parallelExecution := false)
   .dependsOn(ibmMQ, activeMQArtemis)
 
@@ -220,7 +226,8 @@ lazy val commonSettings = Seq(
     "co.fs2"        %% "fs2-core"                      % fs2V,
     "org.typelevel" %% "log4cats-slf4j"                % log4catsV,
     "org.typelevel" %% "cats-effect-testing-scalatest" % catsEffectScalaTestV % Test
-  )
+  ),
+  Test / fork := true
 )
 
 lazy val releaseSettings = {

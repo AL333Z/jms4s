@@ -23,26 +23,37 @@ package jms4s.basespec.providers
 
 import cats.data.NonEmptyList
 import cats.effect.{ Async, IO, Resource }
+import com.dimafeng.testcontainers.GenericContainer
+import com.dimafeng.testcontainers.GenericContainer.DockerImage
 import jms4s.JmsClient
 import jms4s.basespec.Jms4sBaseSpec
 import jms4s.ibmmq.ibmMQ
 import jms4s.ibmmq.ibmMQ._
+import org.testcontainers.containers.BindMode
+import org.testcontainers.containers.wait.strategy.Wait
 
 trait IbmMQBaseSpec extends Jms4sBaseSpec {
+
+  lazy val ibmMqContainer: GenericContainer = GenericContainer(
+    dockerImage = DockerImage(Left("ibmcom/mq:9.2.2.0-r1")),
+    exposedPorts = Seq(1418, 9443),
+    env = Map(
+      "LICENSE"      -> "accept",
+      "MQ_QMGR_NAME" -> "QM1",
+      "MQ_DEV"       -> "true"
+    ),
+    classpathResourceMapping = Seq(("definitions.mqsc", "/etc/mqm/definitions.mqsc", BindMode.READ_ONLY)),
+    waitStrategy = Wait.forLogMessage(".*The listener 'SYSTEM.LISTENER.TCP.1' has started.*", 1)
+  )
 
   override def jmsClientRes(implicit A: Async[IO]): Resource[IO, JmsClient[IO]] =
     ibmMQ.makeJmsClient[IO](
       Config(
         qm = QueueManager("QM1"),
-        endpoints = NonEmptyList.one(Endpoint("localhost", 1414)),
-        // the current docker image seems to be misconfigured, so I need to use admin channel/auth in order to test topic
-        // but maybe it's just me not understanding something properly.. as usual
-        //          channel = Channel("DEV.APP.SVRCONN"),
-        //          username = Some(Username("app")),
-        //          password = None,
-        channel = Channel("DEV.ADMIN.SVRCONN"),
-        username = Some(Username("admin")),
-        password = Some(Password("passw0rd")),
+        endpoints = NonEmptyList.one(Endpoint(ibmMqContainer.host, ibmMqContainer.mappedPort(1414))),
+        channel = Channel("DEV.APP.SVRCONN"),
+        username = Some(Username("app")),
+        password = None,
         clientId = ClientId("jms-specs")
       )
     )

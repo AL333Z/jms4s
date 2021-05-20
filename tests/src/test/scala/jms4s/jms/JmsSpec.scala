@@ -23,6 +23,7 @@ package jms4s.jms
 
 import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.effect.{ Clock, IO, Resource }
+import com.dimafeng.testcontainers.ForAllTestContainer
 import jms4s.basespec.Jms4sBaseSpec
 import jms4s.config.DestinationName
 import jms4s.model.SessionType
@@ -30,7 +31,7 @@ import org.scalatest.freespec.AsyncFreeSpec
 
 import scala.concurrent.duration._
 
-trait JmsSpec extends AsyncFreeSpec with AsyncIOSpec with Jms4sBaseSpec {
+trait JmsSpec extends AsyncFreeSpec with AsyncIOSpec with Jms4sBaseSpec with ForAllTestContainer {
 
   private def contexts(destination: DestinationName) =
     for {

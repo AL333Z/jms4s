@@ -23,21 +23,37 @@ package jms4s.basespec.providers
 
 import cats.data.NonEmptyList
 import cats.effect.{ Async, IO, Resource }
+import com.dimafeng.testcontainers.GenericContainer
+import com.dimafeng.testcontainers.GenericContainer.DockerImage
 import jms4s.JmsClient
 import jms4s.activemq.activeMQ
 import jms4s.activemq.activeMQ._
 import jms4s.basespec.Jms4sBaseSpec
+import org.testcontainers.containers.BindMode
+import org.testcontainers.containers.wait.strategy.Wait
 
 import scala.util.Random
 
 trait ActiveMQArtemisBaseSpec extends Jms4sBaseSpec {
+
+  lazy val activemqContainer: GenericContainer = GenericContainer(
+    dockerImage = DockerImage(Left("vromero/activemq-artemis:2.16.0")),
+    exposedPorts = Seq(61616, 8161),
+    env = Map(
+      "ARTEMIS_USERNAME" -> "admin",
+      "ARTEMIS_PASSWORD" -> "passw0rd"
+    ),
+    classpathResourceMapping =
+      Seq(("broker-00.xml", "/var/lib/artemis/etc-override/broker-00.xml", BindMode.READ_ONLY)),
+    waitStrategy = Wait.forLogMessage(".*Artemis Console available.*", 1)
+  )
 
   override def jmsClientRes(implicit A: Async[IO]): Resource[IO, JmsClient[IO]] =
     for {
       rnd <- Resource.eval(IO(Random.nextInt()))
       client <- activeMQ.makeJmsClient[IO](
                  Config(
-                   endpoints = NonEmptyList.one(Endpoint("localhost", 61616)),
+                   endpoints = NonEmptyList.one(Endpoint(activemqContainer.host, activemqContainer.mappedPort(61616))),
                    username = Some(Username("admin")),
                    password = Some(Password("passw0rd")),
                    clientId = ClientId("jms-specs" + rnd)

@@ -24,6 +24,7 @@ package jms4s
 import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.effect.{ Clock, IO, Ref, Resource }
 import cats.implicits._
+import com.dimafeng.testcontainers.ForAllTestContainer
 import jms4s.JmsAcknowledgerConsumer.AckAction
 import jms4s.JmsAutoAcknowledgerConsumer.AutoAckAction
 import jms4s.JmsTransactedConsumer.TransactionAction
@@ -32,7 +33,7 @@ import jms4s.jms.JmsMessage
 import jms4s.model.SessionType
 import org.scalatest.freespec.AsyncFreeSpec
 
-trait JmsClientSpec extends AsyncFreeSpec with AsyncIOSpec with Jms4sBaseSpec {
+trait JmsClientSpec extends AsyncFreeSpec with AsyncIOSpec with Jms4sBaseSpec with ForAllTestContainer {
 
   s"publish $nMessages messages and then consume them concurrently with local transactions" in {
     val res = for {

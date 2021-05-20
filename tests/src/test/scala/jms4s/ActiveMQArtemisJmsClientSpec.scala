@@ -21,6 +21,9 @@
 
 package jms4s
 
+import com.dimafeng.testcontainers.Container
 import jms4s.basespec.providers.ActiveMQArtemisBaseSpec
 
-class ActiveMQArtemisJmsClientSpec extends JmsClientSpec with ActiveMQArtemisBaseSpec
+class ActiveMQArtemisJmsClientSpec extends JmsClientSpec with ActiveMQArtemisBaseSpec {
+  override val container: Container = activemqContainer
+}

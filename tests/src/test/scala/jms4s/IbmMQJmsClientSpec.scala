@@ -21,6 +21,9 @@
 
 package jms4s
 
+import com.dimafeng.testcontainers.Container
 import jms4s.basespec.providers.IbmMQBaseSpec
 
-class IbmMQJmsClientSpec extends JmsClientSpec with IbmMQBaseSpec
+class IbmMQJmsClientSpec extends JmsClientSpec with IbmMQBaseSpec {
+  override val container: Container = ibmMqContainer
+}
